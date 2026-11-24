@@ -23,12 +23,18 @@ except ImportError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parent.parent
 
 REQUIRED = ("nombre", "entorno", "tipo")
-ENTORNOS = ("dev", "pre", "pro")
-TIPOS = ("aws", "openshift")
-STRING_FIELDS = ("nombre", "aplicacion", "cuenta_aws", "region", "cluster",
-                 "api", "consola", "argocd", "confluence", "notas")
-LIST_FIELDS = ("namespaces", "tags")
-URL_FIELDS = ("api", "consola", "argocd", "confluence")
+ENTORNOS = ("cert", "pre", "pro")
+TIPOS = ("aws", "ocp", "azure")
+STRING_FIELDS = ("nombre", "argocd", "console", "cuenta", "notas", "responsable")
+LIST_FIELDS = ("namespace", "tags")
+URL_FIELDS = ("argocd", "console")
+MAX_NAMESPACES = 20
+# Formato de "cuenta" según el tipo.
+CUENTA_RE = {
+    "aws": (re.compile(r"\d{12}"), "12 dígitos"),
+    "azure": (re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}"),
+              "un ID de suscripción (GUID xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"),
+}
 
 # Palabras que delatan un posible secreto.
 SECRET_WORDS = r"pass(?:word|wd)|contrase[ñn]a|pwd|secret|token|api[_-]?key|private[_-]?key|credential"
@@ -103,16 +109,34 @@ def validate(data) -> list[str]:
 
         for field in STRING_FIELDS:
             if field in entry and entry[field] is not None and not isinstance(entry[field], str):
-                hint = ' (ponlo entre comillas, p. ej. "012345678901")' if field == "cuenta_aws" else ""
+                hint = ' (ponlo entre comillas, p. ej. "012345678901")' if field == "cuenta" else ""
                 errors.append(f"{label}: '{field}' debe ser un texto{hint}")
-        if isinstance(entry.get("cuenta_aws"), str) and not re.fullmatch(r"\d{12}", entry["cuenta_aws"]):
-            errors.append(f"{label}: 'cuenta_aws' debe tener 12 dígitos")
+
+        tipo = entry.get("tipo")
+        # console: solo para OpenShift.
+        if entry.get("console") is not None and tipo in TIPOS and tipo != "ocp":
+            errors.append(f"{label}: 'console' solo se usa con tipo ocp (es '{tipo}')")
+        # cuenta: solo para AWS y Azure, con su formato.
+        cuenta = entry.get("cuenta")
+        if cuenta is not None and tipo == "ocp":
+            errors.append(f"{label}: 'cuenta' solo se usa con tipo aws o azure")
+        elif isinstance(cuenta, str) and tipo in CUENTA_RE:
+            regex, desc = CUENTA_RE[tipo]
+            if not regex.fullmatch(cuenta):
+                errors.append(f"{label}: 'cuenta' de {tipo} debe ser {desc}")
 
         for field in LIST_FIELDS:
             if field in entry and entry[field] is not None:
                 v = entry[field]
                 if not isinstance(v, list) or not all(isinstance(x, (str, int, float)) for x in v):
                     errors.append(f"{label}: '{field}' debe ser una lista de textos")
+        ns = entry.get("namespace")
+        if isinstance(ns, list):
+            if len(ns) > MAX_NAMESPACES:
+                errors.append(f"{label}: 'namespace' tiene {len(ns)} elementos (máximo {MAX_NAMESPACES})")
+            dups = sorted({str(x) for x in ns if ns.count(x) > 1})
+            if dups:
+                errors.append(f"{label}: namespaces repetidos: {', '.join(dups)}")
 
         for field in URL_FIELDS:
             v = entry.get(field)
