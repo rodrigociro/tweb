@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal de entornos</title>
+<meta name="description" content="Inventario de cuentas AWS y clusters OpenShift por entorno">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='26' height='6' rx='2' fill='%233b82f6'/%3E%3Crect x='3' y='13' width='26' height='6' rx='2' fill='%23f59e0b'/%3E%3Crect x='3' y='21' width='26' height='6' rx='2' fill='%23ef4444'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #f0f2f5;
+    --border: #dde1e7;
+    --text: #1b1f24;
+    --muted: #5d6673;
+    --accent: #2563eb;
+    --mark: #fde68a;
+    --mark-text: #1b1f24;
+    --dev: #2563eb;  --dev-bg: #dbeafe;
+    --pre: #b45309;  --pre-bg: #fef3c7;
+    --pro: #b91c1c;  --pro-bg: #fee2e2;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+    --radius: 10px;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1216;
+    --surface: #171b21;
+    --surface-2: #1f242c;
+    --border: #2c333d;
+    --text: #e6e9ee;
+    --muted: #9aa4b2;
+    --accent: #60a5fa;
+    --mark: #a16207;
+    --mark-text: #fff;
+    --dev: #93c5fd;  --dev-bg: #1e3a5f;
+    --pre: #fcd34d;  --pre-bg: #4a3510;
+    --pro: #fca5a5;  --pro-bg: #5a1d1d;
+    --shadow: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1216; --surface: #171b21; --surface-2: #1f242c; --border: #2c333d;
+      --text: #e6e9ee; --muted: #9aa4b2; --accent: #60a5fa; --mark: #a16207; --mark-text: #fff;
+      --dev: #93c5fd; --dev-bg: #1e3a5f; --pre: #fcd34d; --pre-bg: #4a3510;
+      --pro: #fca5a5; --pro-bg: #5a1d1d; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  code, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .9em; }
+  mark { background: var(--mark); color: var(--mark-text); border-radius: 2px; padding: 0 1px; }
+
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    border-bottom: 1px solid var(--border); padding: 14px 16px 12px;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  h1 { font-size: 1.25rem; margin: 0; flex: 1; }
+  .count { color: var(--muted); font-size: .9rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .search { position: relative; flex: 1 1 320px; }
+  .search input {
+    width: 100%; padding: 9px 36px 9px 12px; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .search kbd {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font: 12px ui-monospace, monospace; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; pointer-events: none;
+  }
+  select, button {
+    font: inherit; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .icon-btn { padding: 8px 10px; line-height: 1; }
+
+  main { padding: 16px; }
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 14px 16px; border-top: 4px solid var(--c, var(--border));
+    display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  }
+  .card.dev { --c: var(--dev); } .card.pre { --c: var(--pre); } .card.pro { --c: var(--pro); }
+  .card-head { display: flex; align-items: flex-start; gap: 8px; }
+  .card h2 { font-size: 1.05rem; margin: 0; flex: 1; overflow-wrap: anywhere; }
+  .badge {
+    font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .badge.dev { color: var(--dev); background: var(--dev-bg); }
+  .badge.pre { color: var(--pre); background: var(--pre-bg); }
+  .badge.pro { color: var(--pro); background: var(--pro-bg); }
+  .badge.tipo { color: var(--muted); background: var(--surface-2); }
+  .sub { color: var(--muted); font-size: .9rem; margin-top: -4px; }
+
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+  dt { color: var(--muted); font-size: .85rem; padding-top: 1px; }
+  dd { margin: 0; min-width: 0; overflow-wrap: anywhere; display: flex; align-items: flex-start; gap: 6px; }
+  dd .val { min-width: 0; }
+  .copy {
+    flex: none; font-size: .75rem; padding: 1px 6px; border-radius: 5px; color: var(--muted);
+    background: var(--surface-2);
+  }
+  .copy.ok { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: .8rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; }
+  .chip.tag { cursor: pointer; }
+  .notas { font-size: .9rem; background: var(--surface-2); border-radius: 6px; padding: 6px 10px; white-space: pre-wrap; }
+
+  .empty, .error { text-align: center; color: var(--muted); padding: 48px 16px; }
+  .error { color: var(--pro); }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; padding: 8px 16px 24px; }
+
+  @media (max-width: 600px) {
+    .top { flex-wrap: wrap; }
+    .controls select { flex: 1 1 30%; }
+    .search kbd { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1>Portal de entornos</h1>
+      <span class="count" id="count" aria-live="polite"></span>
+      <button class="icon-btn" id="theme" type="button" title="Cambiar tema" aria-label="Cambiar tema">🌓</button>
+    </div>
+    <div class="controls">
+      <div class="search">
+        <input id="q" type="search" placeholder="Buscar en todos los campos…" autocomplete="off"
+               aria-label="Buscar" spellcheck="false">
+        <kbd>/</kbd>
+      </div>
+      <select id="f-entorno" aria-label="Filtrar por entorno"><option value="">Entorno: todos</option></select>
+      <select id="f-tipo" aria-label="Filtrar por tipo"><option value="">Tipo: todos</option></select>
+      <select id="f-aplicacion" aria-label="Filtrar por aplicación"><option value="">Aplicación: todas</option></select>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>Ningún entorno coincide con la búsqueda.</div>
+</main>
+<footer class="wrap" id="footer"></footer>
+
+<script>
+(() => {
+  "use strict";
+
+  const ORDER_ENTORNO = { dev: 0, pre: 1, pro: 2 };
+  const LABELS = {
+    aplicacion: "Aplicación", cuenta_aws: "Cuenta AWS", region: "Región", cluster: "Cluster",
+    api: "API", consola: "Consola", argocd: "Argo CD", namespaces: "Namespaces",
+    confluence: "Confluence", tags: "Tags", notas: "Notas",
+  };
+  // Orden de los campos conocidos en la tarjeta; los extra van después.
+  const FIELD_ORDER = ["aplicacion", "cuenta_aws", "region", "cluster", "api", "consola",
+                       "argocd", "namespaces", "confluence"];
+  const COPYABLE = new Set(["cuenta_aws", "cluster", "api"]);
+  const HEADER_FIELDS = new Set(["nombre", "entorno", "tipo", "notas", "tags"]);
+
+  const $ = (s) => document.querySelector(s);
+  const els = {
+    q: $("#q"), grid: $("#grid"), empty: $("#empty"), count: $("#count"), footer: $("#footer"),
+    entorno: $("#f-entorno"), tipo: $("#f-tipo"), aplicacion: $("#f-aplicacion"), theme: $("#theme"),
+  };
+
+  /* ---------- Tema ---------- */
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignorar */ } },
+  };
+  function applyTheme(t) {
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+  }
+  applyTheme(store.get("tema"));
+  els.theme.addEventListener("click", () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    applyTheme(next); store.set("tema", next);
+  });
+
+  /* ---------- Utilidades ---------- */
+  const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const isUrl = (v) => typeof v === "string" && /^https?:\/\/\S+$/i.test(v);
+  const humanize = (k) => LABELS[k] || (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+
+  function flatten(v) {
+    if (v == null) return "";
+    if (Array.isArray(v)) return v.map(flatten).join(" ");
+    if (typeof v === "object") return Object.entries(v).map(([k, x]) => k + " " + flatten(x)).join(" ");
+    return String(v);
+  }
+
+  // Inserta texto en `parent` resaltando las palabras buscadas (sin innerHTML).
+  // Se compara sobre el texto normalizado (sin tildes) manteniendo los índices originales.
+  function appendHighlighted(parent, text, terms) {
+    text = String(text);
+    if (!terms.length) { parent.append(text); return; }
+    const chars = [...text];
+    const normChars = chars.map((c) => norm(c));
+    const normText = normChars.join("");
+    // mapa índice normalizado -> índice original
+    const map = []; normChars.forEach((n, i) => { for (let j = 0; j < n.length; j++) map.push(i); });
+    map.push(chars.length);
+    const re = new RegExp(terms.map(escapeRe).join("|"), "g");
+    const ranges = [];
+    let m;
+    while ((m = re.exec(normText))) {
+      if (!m[0].length) { re.lastIndex++; continue; }
+      ranges.push([map[m.index], map[m.index + m[0].length - 1] + 1]);
+    }
+    let pos = 0;
+    for (const [a, b] of ranges) {
+      if (a < pos) continue;
+      if (a > pos) parent.append(chars.slice(pos, a).join(""));
+      const mk = document.createElement("mark");
+      mk.textContent = chars.slice(a, b).join("");
+      parent.append(mk);
+      pos = b;
+    }
+    if (pos < chars.length) parent.append(chars.slice(pos).join(""));
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  async function copyText(text, btn) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = el("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.append(ta); ta.select();
+      try { document.execCommand("copy"); } catch { /* nada */ }
+      ta.remove();
+    }
+    btn.textContent = "✓ copiado"; btn.classList.add("ok");
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = "copiar"; btn.classList.remove("ok"); }, 1400);
+  }
+
+  /* ---------- Render ---------- */
+  function renderValue(dd, key, value, terms) {
+    const span = el("span", "val");
+    if (Array.isArray(value)) {
+      span.className = "val chips";
+      value.forEach((v) => { const c = el("span", "chip mono"); appendHighlighted(c, flatten(v), terms); span.append(c); });
+    } else if (value && typeof value === "object") {
+      appendHighlighted(span, JSON.stringify(value), terms);
+      span.classList.add("mono");
+    } else if (isUrl(value)) {
+      const a = el("a"); a.href = value; a.target = "_blank"; a.rel = "noopener noreferrer";
+      appendHighlighted(a, value, terms);
+      span.append(a);
+    } else {
+      if (["cuenta_aws", "cluster", "region"].includes(key)) span.classList.add("mono");
+      appendHighlighted(span, String(value), terms);
+    }
+    dd.append(span);
+    if (COPYABLE.has(key) && value != null && typeof value !== "object") {
+      const b = el("button", "copy", "copiar");
+      b.type = "button"; b.title = "Copiar " + humanize(key);
+      b.addEventListener("click", () => copyText(String(value), b));
+      dd.append(b);
+    }
+  }
+
+  function renderCard(item, terms) {
+    const env = ORDER_ENTORNO[item.entorno] != null ? item.entorno : "";
+    const card = el("article", "card " + env);
+
+    const head = el("div", "card-head");
+    const h2 = el("h2"); appendHighlighted(h2, item.nombre, terms);
+    const bEnv = el("span", "badge " + env); appendHighlighted(bEnv, item.entorno, terms);
+    const bTipo = el("span", "badge tipo"); appendHighlighted(bTipo, item.tipo === "aws" ? "AWS" : item.tipo === "openshift" ? "OpenShift" : item.tipo, terms);
+    head.append(h2, bTipo, bEnv);
+    card.append(head);
+
+    const dl = el("dl");
+    const keys = Object.keys(item).filter((k) => !HEADER_FIELDS.has(k));
+    keys.sort((a, b) => {
+      const ia = FIELD_ORDER.indexOf(a), ib = FIELD_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    for (const k of keys) {
+      const v = item[k];
+      if (v == null || v === "" || (Array.isArray(v) && !v.length)) continue;
+      dl.append(el("dt", null, humanize(k)));
+      const dd = el("dd"); renderValue(dd, k, v, terms); dl.append(dd);
+    }
+    if (dl.children.length) card.append(dl);
+
+    if (item.notas) {
+      const n = el("div", "notas"); appendHighlighted(n, item.notas, terms); card.append(n);
+    }
+    if (Array.isArray(item.tags) && item.tags.length) {
+      const t = el("div", "chips");
+      item.tags.forEach((tag) => {
+        const c = el("button", "chip tag"); c.type = "button"; c.title = "Buscar este tag";
+        c.append("#"); appendHighlighted(c, tag, terms);
+        c.addEventListener("click", () => { els.q.value = String(tag); update(); });
+        t.append(c);
+      });
+      card.append(t);
+    }
+    return card;
+  }
+
+  /* ---------- Estado / filtros ---------- */
+  let DATA = [];
+
+  function fillSelect(sel, values, fmt) {
+    for (const v of values) {
+      const o = el("option", null, fmt ? fmt(v) : v); o.value = v; sel.append(o);
+    }
+  }
+
+  function readUrl() {
+    const p = new URLSearchParams(location.search);
+    els.q.value = p.get("q") || "";
+    for (const f of ["entorno", "tipo", "aplicacion"]) {
+      const v = p.get(f) || "";
+      if ([...els[f].options].some((o) => o.value === v)) els[f].value = v;
+    }
+  }
+
+  function writeUrl() {
+    const p = new URLSearchParams();
+    if (els.q.value.trim()) p.set("q", els.q.value.trim());
+    for (const f of ["entorno", "tipo", "aplicacion"]) if (els[f].value) p.set(f, els[f].value);
+    const qs = p.toString();
+    const url = location.pathname + (qs ? "?" + qs : "") + location.hash;
+    if (url !== location.pathname + location.search + location.hash) history.replaceState(null, "", url);
+  }
+
+  function update() {
+    const terms = norm(els.q.value).split(/\s+/).filter(Boolean);
+    const fe = els.entorno.value, ft = els.tipo.value, fa = els.aplicacion.value;
+    const items = DATA.filter((it) =>
+      (!fe || it.entorno === fe) && (!ft || it.tipo === ft) && (!fa || it.aplicacion === fa) &&
+      terms.every((t) => it._search.includes(t)));
+
+    els.grid.replaceChildren(...items.map((it) => renderCard(it.item, terms)));
+    els.empty.hidden = items.length > 0;
+    els.count.textContent = items.length === DATA.length
+      ? `${DATA.length} entornos` : `${items.length} de ${DATA.length} entornos`;
+    writeUrl();
+  }
+
+  async function init() {
+    try {
+      const res = await fetch("data.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const raw = await res.json();
+      if (!Array.isArray(raw)) throw new Error("formato inesperado");
+      raw.sort((a, b) =>
+        (ORDER_ENTORNO[a.entorno] ?? 9) - (ORDER_ENTORNO[b.entorno] ?? 9) ||
+        String(a.nombre).localeCompare(String(b.nombre), "es"));
+      DATA = raw.map((item) => ({
+        item, entorno: item.entorno, tipo: item.tipo, aplicacion: item.aplicacion,
+        _search: norm(Object.entries(item).map(([k, v]) => k + " " + flatten(v)).join(" ")),
+      }));
+    } catch (e) {
+      els.grid.replaceChildren();
+      const msg = el("div", "error",
+        "No se pudo cargar data.json (" + e.message + "). " +
+        "Genera el sitio con «python scripts/build.py» y sírvelo por HTTP (p. ej. «python -m http.server -d _site»).");
+      els.grid.after(msg);
+      return;
+    }
+
+    const uniq = (k) => [...new Set(DATA.map((d) => d[k]).filter(Boolean))];
+    fillSelect(els.entorno, uniq("entorno").sort((a, b) => (ORDER_ENTORNO[a] ?? 9) - (ORDER_ENTORNO[b] ?? 9)),
+               (v) => v.toUpperCase());
+    fillSelect(els.tipo, uniq("tipo").sort(), (v) => v === "aws" ? "AWS" : v === "openshift" ? "OpenShift" : v);
+    fillSelect(els.aplicacion, uniq("aplicacion").sort((a, b) => a.localeCompare(b, "es")));
+
+    readUrl();
+    update();
+    els.footer.textContent = "Fuente: data/entornos.yaml · Atajo: «/» para buscar, Esc para limpiar";
+  }
+
+  /* ---------- Eventos ---------- */
+  let timer;
+  els.q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(update, 80); });
+  for (const f of ["entorno", "tipo", "aplicacion"]) els[f].addEventListener("change", update);
+  window.addEventListener("popstate", () => { readUrl(); update(); });
+
+  document.addEventListener("keydown", (e) => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    const typing = tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable;
+    if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); els.q.focus(); els.q.select();
+    } else if (e.key === "Escape" && e.target === els.q) {
+      if (els.q.value) { els.q.value = ""; update(); } else { els.q.blur(); }
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

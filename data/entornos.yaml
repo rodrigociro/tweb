@@ -1,0 +1,51 @@
+# Inventario de entornos (cuentas AWS y clusters OpenShift).
+#
+# Obligatorios: nombre, entorno (dev|pre|pro), tipo (aws|openshift)
+# Opcionales:   aplicacion, cuenta_aws (entre comillas), region, cluster, api,
+#               consola, argocd, namespaces (lista), confluence, notas, tags (lista)
+# Se permiten campos extra: se muestran en la tarjeta y entran en la búsqueda.
+#
+# ¡NO pongas secretos aquí! (contraseñas, tokens, API keys, claves AKIA...).
+# El build falla si detecta algo que lo parezca.
+#
+# Todos los datos de este fichero son FICTICIOS.
+
+- nombre: Tienda Online - Desarrollo
+  entorno: dev
+  tipo: aws
+  aplicacion: tienda-online
+  cuenta_aws: "111111111111"
+  region: eu-west-1
+  consola: https://111111111111.signin.aws.amazon.com/console
+  confluence: https://ejemplo.atlassian.net/wiki/spaces/TIENDA/pages/1/Entorno+DEV
+  notas: Cuenta sandbox del equipo de e-commerce. Se apaga por las noches.
+  tags: [ecommerce, sandbox, eks]
+  responsable: equipo-ecommerce
+
+- nombre: OCP Preproducción Madrid
+  entorno: pre
+  tipo: openshift
+  aplicacion: portal-clientes
+  cluster: ocp-pre-mad01
+  api: https://api.ocp-pre-mad01.ejemplo.local:6443
+  consola: https://console-openshift-console.apps.ocp-pre-mad01.ejemplo.local
+  argocd: https://argocd.apps.ocp-pre-mad01.ejemplo.local
+  namespaces:
+    - portal-clientes-pre
+    - portal-clientes-batch-pre
+  confluence: https://ejemplo.atlassian.net/wiki/spaces/PORTAL/pages/2/Preproduccion
+  notas: Las ventanas de despliegue son martes y jueves de 8:00 a 10:00.
+  tags: [openshift, portal]
+
+- nombre: Pagos - Producción
+  entorno: pro
+  tipo: aws
+  aplicacion: pagos
+  cuenta_aws: "222222222222"
+  region: eu-south-2
+  consola: https://222222222222.signin.aws.amazon.com/console
+  argocd: https://argocd.pagos.ejemplo.local
+  confluence: https://ejemplo.atlassian.net/wiki/spaces/PAGOS/pages/3/Produccion
+  notas: Acceso solo mediante rol de break-glass. Cambios con CAB aprobado.
+  tags: [pci, critico]
+  guardia: "+34 600 000 000"
