@@ -20,42 +20,146 @@
 #
 # Todos los datos de este fichero son FICTICIOS.
 
+
 - nombre: Portal Clientes - Certificación
   entorno: cert
   tipo: ocp
   argocd: https://argocd.apps.ocp-cert-mad01.ejemplo.local
   console: https://console-openshift-console.apps.ocp-cert-mad01.ejemplo.local
   notas: Las ventanas de despliegue son martes y jueves de 8:00 a 10:00.
-  tags: [portal, clientes]
+  tags: [portal, clientes, java]
   responsable: Ana Ejemplo
   namespace:
-    - acb-prueba-cert
     - acb-portal-front-cert
     - acb-portal-api-cert
     - acb-portal-batch-cert
     - acb-portal-jobs-cert
+    - acb-portal-notificaciones-cert
+
+- nombre: Portal Clientes - Producción
+  entorno: pro
+  tipo: ocp
+  argocd: https://argocd.apps.ocp-pro-mad01.ejemplo.local
+  console: https://console-openshift-console.apps.ocp-pro-mad01.ejemplo.local
+  notas: Cambios solo con CAB aprobado. Guardia 24x7.
+  tags: [portal, clientes, java, critico]
+  responsable: Ana Ejemplo
+  namespace:
+    - acb-portal-front-pro
+    - acb-portal-api-pro
+    - acb-portal-batch-pro
+    - acb-portal-jobs-pro
+    - acb-portal-notificaciones-pro
+
+- nombre: Tienda Online - Certificación
+  entorno: cert
+  tipo: aws
+  argocd: https://argocd.tienda-cert.ejemplo.local
+  cuenta: "111111111111"
+  notas: Cuenta sandbox del equipo de e-commerce. Se apaga por las noches.
+  tags: [ecommerce, eks]
+  responsable: Equipo E-commerce
+  namespace:
+    - tienda-web-cert
+    - tienda-api-cert
 
 - nombre: Tienda Online - Preproducción
   entorno: pre
   tipo: aws
-  argocd: https://argocd.tienda.ejemplo.local
-  cuenta: "111111111111"
-  notas: Cuenta compartida con el equipo de e-commerce. Se apaga por las noches.
+  argocd: https://argocd.tienda-pre.ejemplo.local
+  cuenta: "111111111112"
+  notas: Datos anonimizados copiados de producción cada lunes.
   tags: [ecommerce, eks]
   responsable: Equipo E-commerce
   namespace:
     - tienda-web-pre
     - tienda-api-pre
+    - tienda-busqueda-pre
+
+- nombre: Tienda Online - Producción
+  entorno: pro
+  tipo: aws
+  argocd: https://argocd.tienda-pro.ejemplo.local
+  cuenta: "111111111113"
+  notas: Picos de carga en campañas (Black Friday, rebajas). Escalado automático activo.
+  tags: [ecommerce, eks, critico]
+  responsable: Equipo E-commerce
+  namespace:
+    - tienda-web-pro
+    - tienda-api-pro
+    - tienda-busqueda-pro
+    - tienda-carrito-pro
+    - tienda-checkout-pro
+    - tienda-catalogo-pro
+    - tienda-recomendaciones-pro
+    - tienda-promociones-pro
+    - tienda-envios-pro
+    - tienda-devoluciones-pro
+    - tienda-facturas-pro
+    - tienda-batch-pro
+
+- nombre: Pagos - Preproducción
+  entorno: pre
+  tipo: azure
+  argocd: https://argocd.pagos-pre.ejemplo.local
+  cuenta: "00000000-0000-0000-0000-000000000001"
+  notas: Conectado al entorno de pruebas de la pasarela bancaria.
+  tags: [pci, aks]
+  responsable: Luis Ejemplo
+  namespace:
+    - pagos-core-pre
+    - pagos-gateway-pre
+    - pagos-antifraude-pre
 
 - nombre: Pagos - Producción
   entorno: pro
   tipo: azure
-  argocd: https://argocd.pagos.ejemplo.local
-  cuenta: "00000000-0000-0000-0000-000000000001"
+  argocd: https://argocd.pagos-pro.ejemplo.local
+  cuenta: "00000000-0000-0000-0000-000000000002"
   notas: Acceso solo mediante rol de break-glass. Cambios con CAB aprobado.
-  tags: [pci, critico, aks]
+  tags: [pci, aks, critico]
   responsable: Luis Ejemplo
   namespace:
     - pagos-core-pro
     - pagos-gateway-pro
     - pagos-antifraude-pro
+    - pagos-conciliacion-pro
+
+- nombre: Datos y Analítica - Certificación
+  entorno: cert
+  tipo: azure
+  argocd: https://argocd.datos-cert.ejemplo.local
+  cuenta: "00000000-0000-0000-0000-000000000003"
+  notas: Pipelines nocturnos de 1:00 a 5:00. No desplegar en esa franja.
+  tags: [datos, spark, aks]
+  responsable: Marta Ejemplo
+  namespace:
+    - datos-ingesta-cert
+    - datos-etl-cert
+    - datos-dashboards-cert
+
+- nombre: Identidad y Accesos - Preproducción
+  entorno: pre
+  tipo: ocp
+  argocd: https://argocd.apps.ocp-pre-mad01.ejemplo.local
+  console: https://console-openshift-console.apps.ocp-pre-mad01.ejemplo.local
+  notas: Servicio compartido por todas las aplicaciones. Avisar antes de reiniciar.
+  tags: [seguridad, keycloak, compartido]
+  responsable: Equipo Plataforma
+  namespace:
+    - iam-keycloak-pre
+    - iam-gateway-pre
+
+- nombre: Plataforma Observabilidad - Producción
+  entorno: pro
+  tipo: ocp
+  argocd: https://argocd.apps.ocp-pro-mad01.ejemplo.local
+  console: https://console-openshift-console.apps.ocp-pro-mad01.ejemplo.local
+  notas: Prometheus, Grafana y Loki para todos los clusters.
+  tags: [observabilidad, grafana, compartido]
+  responsable: Equipo Plataforma
+  namespace:
+    - obs-prometheus-pro
+    - obs-grafana-pro
+    - obs-loki-pro
+    - obs-alertmanager-pro
