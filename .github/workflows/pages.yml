@@ -1,0 +1,33 @@
+name: Publicar hola mundo en GitHub Pages
+
+# Solo manual: en este repo la web de Pages ya la publica la rama main (portal de
+# entornos) y un repo tiene un único sitio de Pages, así que publicar desde aquí
+# lo sustituiría. En un repo nuevo, añade:
+#   push:
+#     branches: [develop]
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
